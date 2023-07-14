@@ -7,10 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   Add basic styling of `autodoc` generated methods for readability (Temidayo Azeez)
+-   Add Prettier formatting and checks (LB (Ben) Johnston)
 
 ### Fixed
 
 -   Ensure names in code use monospace fonts (LB (Ben) Johnston)
+-   Ensure code copy button is always visible (LB (Ben) Johnston)
 
 ### Removed
 
