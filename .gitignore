@@ -25,3 +25,6 @@ npm-debug.log
 venv/
 env/
 .env/
+.python-version
+
+geckodriver.log

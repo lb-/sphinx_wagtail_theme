@@ -5,17 +5,13 @@
 {%- else %}
     {%- set titlesuffix = "" -%}
 {%- endif -%}
-{%- set blacklist_script_files = [] -%}
-{%- set blacklist_script_files = blacklist_script_files + ['_static/jquery.js'] -%}
-{%- set blacklist_script_files = blacklist_script_files + ['_static/underscore.js'] -%}
-{%- set blacklist_script_files = blacklist_script_files + ['_static/doctools.js'] -%}
-{%- set blacklist_script_files = blacklist_script_files + ['_static/language_data.js'] -%}
 {%- set hidetoc = '' %}
 {%- if meta is defined and meta %}
     {%- if 'hidetoc' in meta.keys() %}
         {%- set hidetoc = meta.get('hidetoc') %}
     {%- endif %}
 {%- endif %}
+{%- set sphinx_version_info = sphinx_version.split('.') | map('int') | list -%}
 <!DOCTYPE html>
 <html class="no-js" {% if language is not none %}lang="{{ language }}"{% endif %}>
 <head>
@@ -24,24 +20,28 @@
         {{ metatags }}
     {%- endif %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="docsearch:name" content="{{ project|striptags|e }}" />
-    <meta name="docsearch:package_type" content="{{ package_type|striptags|e }}" />
-    <meta name="docsearch:release" content="{{ release|striptags|e }}" />
-    <meta name="docsearch:version" content="{{ version|striptags|e }}" />
     {% block htmltitle %}
         <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {% endblock %}
     {%- if favicon %}
         <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}" />
     {%- endif %}
+
+    {#- Include our own stylesheets -#}
+    {%- if sphinx_version_info[0] < 4 %}
     <link rel="stylesheet" type="text/css" href="{{ pathto('_static/' + style, 1) }}" />
+    {%- endif %}
     <link rel="stylesheet" type="text/css" href="{{ pathto('_static/dist/fontawesome.css', 1) }}" />
+    {#- Include stylesheets from sphinx (e.g. user custom css #}
     {%- for css in css_files %}
+    {#- Block pygments css; we are manually including ours in theme.css instead #}
+    {%- if css not in ["_static/pygments.css"] %}
       {%- if css|attr("filename") %}
       {{ css_tag(css) }}
       {%- else %}
       <link rel="stylesheet" href="{{ pathto(css, 1)|e }}" type="text/css" />
       {%- endif %}
+    {%- endif %}
     {%- endfor %}
     {%- block linktags %}
         {%- if hasdoc('about') %}
@@ -70,11 +70,13 @@
     {%- block extrahead %}{% endblock -%}
 </head>
 <body>
+    <script type="text/javascript" src="{{ pathto('_static/dist/blocking.js', 1) }}"></script>
     <header class="container-fluid bg-primary">
+        <a class="btn btn-sm btn-light skip-to-content-link" href="#main">{{ _('Skip to content') }}</a>
         <div class="container-fluid">
             <div class="navbar navbar-expand-lg navbar-dark font-weight-bold">
                 {%- if theme_logo and theme_logo != 'None' %}
-                    <a href="{{ theme_logo_url }}"
+                    <a href="{{ theme_logo_url | default(pathto(master_doc), true) }}"
                         {% if theme_logo_alt %}title="{{ theme_logo_alt|e }}"{% endif %}
                         class="logo navbar-brand"
                     >
@@ -82,7 +84,7 @@
                             {%- if theme_logo_width %} width="{{ theme_logo_width|e }}"{% endif %}
                             {%- if theme_logo_height %} height="{{ theme_logo_height|e }}"{% endif %}
                             {%- if theme_logo_alt %} alt="{{ theme_logo_alt|e }}"{% endif %}
-                            {%- if theme_logo_title and not theme_logo_url %} title="{{ theme_logo_title|e }}"{% endif %}
+                            {%- if theme_logo_title %} title="{{ theme_logo_title|e }}"{% endif %}
                             class="logo-img"
                         />
                         {{ theme_project_name }}
@@ -101,15 +103,15 @@
                 {% endif %}
                 <button class="navbar-toggler btn btn-primary d-lg-none" type="button" data-toggle="collapse" data-target="#collapseSidebar" aria-expanded="false" aria-controls="collapseExample">
                     <span class="navbar-toggler-icon"></span>
-                    <span class="navbar-toggler-text">Menu</span>
+                    <span class="sr-only">{{ _('menu') }}</span>
                 </button>
             </div>
         </div>
     </header>
     <div class="container-fluid">
         <div class="row">
-            <aside class="col-12 col-lg-3">
-                <div id="collapseSidebar" class="collapse sticky-top d-lg-block pt-5">
+            <aside class="col-12 col-lg-3 sidebar-container">
+                <div id="collapseSidebar" class="collapse sticky-top d-lg-block pt-5 pr-lg-4">
                     {%- for sidebartemplate in sidebars %}
                     {%- include sidebartemplate %}
                     {%- endfor %}
@@ -123,11 +125,18 @@
                     <div class="col">
                         {% include "breadcrumbs.html" %}
                     </div>
-                    {%- if pagename != "search" -%}
-                        <div class="col-auto d-none d-lg-block">
-                            {% include "source-buttons.html" %}
-                        </div>
-                    {% endif %}
+                    <div class="col-sm-12 col-lg-auto mt-3 mt-lg-3">
+                        <noscript>
+                            <p>{{ _('JavaScript is required to toggle light/dark mode.') }}.</p>
+                        </noscript>
+                        <button id="wagtail-theme" class="btn btn-sm btn-light text-decoration-none" type="button">
+                            <span class="dark-only"><i class="fas fa-sun"></i> {{ _('Light mode') }}</span>
+                            <span class="light-only"><i class="fas fa-moon"></i> {{ _('Dark mode') }}</span>
+                        </button>
+                        {%- if pagename != "search" -%}
+                        {% include "source-buttons.html" %}
+                        {% endif %}
+                    </div>
                 </header>
                 <div class="row" >
                     <div class="col-12">
@@ -135,17 +144,19 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-12 col-lg-9 order-last order-lg-first">
-                        <main role="main">
+                    <div class="col-12 col-lg-9 order-last order-lg-first rst-content">
+                        <main role="main" id="main">
                             {%- block body %}
                             {% endblock -%}
                         </main>
                         {% include "pager.html" %}
                     </div>
                     {% if display_toc and not hidetoc %}
-                    <nav class="col-12 col-lg-3 pb-4 toc page-toc" aria-labelledby="page-toc-heading">
-                        <p class="font-weight-bold" id="page-toc-heading">Page contents</p>
-                        {{ toc }}
+                    <nav class="col-12 col-lg-3 pb-4">
+                        <div class="sticky-top toc page-toc" aria-labelledby="page-toc-heading">
+                            <p class="font-weight-bold" id="page-toc-heading">Page contents</p>
+                            {{ toc }}
+                        </div>
                     </nav>
                     {% endif %}
                 </div>
@@ -158,32 +169,22 @@
         </div>
     </footer>
 
-    {% if not embedded %}
-        <script type="text/javascript">
-            var DOCUMENTATION_OPTIONS = {
-                URL_ROOT: '{{ url_root }}',
-                VERSION: '{{ release|e }}',
-                COLLAPSE_INDEX: false,
-                FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-                HAS_SOURCE: {{ has_source| lower }}
-            };
-        </script>
-        <script type="text/javascript" src="{{ pathto('_static/dist/jquery.min.js', 1) }}"></script>
+    {%- if not embedded %}
+        {#- Sphinx >=1.8.0 has this as an external js file. Sphinx 4.0 includes in in script_files #}
+        {%- if sphinx_version_info[0] < 4 %}
+        <script id="documentation_options" data-url_root="{{ url_root }}" src="{{ pathto('_static/documentation_options.js', 1) }}"></script>
+        {%- endif -%}
+        {%- for scriptfile in script_files %}
+        {{ js_tag(scriptfile) }}
+        {%- endfor %}
         <script type="text/javascript" src="{{ pathto('_static/dist/theme.js', 1) }}"></script>
         <script type="text/javascript" src="{{ pathto('_static/dist/vendor.js', 1) }}"></script>
-        <script type="text/javascript" src="{{ pathto('_static/dist/underscore.min.js', 1) }}"></script>
-        <script type="text/javascript" src="{{ pathto('_static/language_data.js', 1) }}"></script>
-        <script type="text/javascript" src="{{ pathto('_static/dist/doctools.js', 1) }}"></script>
-            {%- for scriptfile in script_files %}
-                {%- if scriptfile not in blacklist_script_files %}
-        {{ js_tag(scriptfile) }}
-                {%- endif %}
-            {%- endfor %}
     {%- endif %}
     {%- block search %}
-        <script type="text/javascript" src="{{ pathto('_static/dist/searchtools.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/searchtools.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/language_data.js', 1) }}"></script>
         <script type="text/javascript">
-            jQuery(function() { Search.loadIndex("{{ pathto('searchindex.js', 1) }}"); });
+            document.addEventListener('DOMContentLoaded', function() { Search.loadIndex("{{ pathto('searchindex.js', 1) }}"); });
         </script>
         <script type="text/javascript" id="searchindexloader"></script>
     {% endblock -%}
