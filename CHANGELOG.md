@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 6.2.0 (unreleased)
+## [6.3.0] - Unreleased
 
 ### Added
 
@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
--   Update client-side development dependencies (LB (Ben) Johnston)
+-   ...
 
 ### Removed
 
@@ -18,12 +18,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
--   Update `favicon` usage to be the new Sphinx variable `favicon_url` & add default favicon (Sahil Jangra)
--   Avoid using pkgresources module for generating version, replace with use importlib.metadata (Salvo Polizzi)
+-   ...
 
 ### Security
 
 -   ...
+
+## [6.2.0] - 2024-01-30
+
+-   Update client-side development dependencies (LB (Ben) Johnston)
+
+### Fixed
+
+-   Update `favicon` usage to be the new Sphinx variable `favicon_url` & add default favicon (Sahil Jangra)
+-   Avoid using pkgresources module for generating version, replace with use importlib.metadata (Salvo Polizzi)
 
 ## [6.1.1] - 2023-07-19
 
